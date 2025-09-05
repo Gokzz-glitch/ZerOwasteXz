@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZerOwasteX Interactive</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Inter', sans-serif; background:#0D1117; color:#C9D1D9; }
+.gradient-text { background:linear-gradient(90deg,#38bdf8,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent; }
+.hero-bg { background:#010409; background-image:radial-gradient(circle at 1px 1px,#161b22 1px,transparent 0); background-size:20px 20px; position:relative; overflow:hidden; }
+.hero-bg::before { content:''; position:absolute; top:50%; left:50%; width:800px; height:800px; background-image:conic-gradient(from 0deg at 50% 50%,#34d39900 0%,#34d39933 50%,#34d39900 100%); transform:translate(-50%,-50%); animation:rotate 20s linear infinite; }
+@keyframes rotate { from{transform:translate(-50%,-50%) rotate(0deg);} to{transform:translate(-50%,-50%) rotate(360deg);} }
+.feature-card, .stat-card, .login-card, .dashboard-card { background:rgba(22,27,34,0.8); backdrop-filter:blur(10px); border:1px solid #30363d; transition:transform 0.3s ease,box-shadow 0.3s ease; }
+.feature-card:hover { transform:translateY(-5px); box-shadow:0 10px 15px -3px rgba(52,211,153,0.1),0 4px 6px -2 rgba(52,211,153,0.05); }
+.fade-in { opacity:0; transform:translateY(20px); transition:opacity 0.6s ease-out, transform 0.6s ease-out; }
+.fade-in.visible { opacity:1; transform:translateY(0); }
+.nav-link { position:relative; transition:color 0.3s; }
+.nav-link::after { content:''; position:absolute; width:0; height:2px; bottom:-4px; left:50%; transform:translateX(-50%); background-color:#34d399; transition:width 0.3s ease-in-out; }
+.nav-link:hover::after { width:100%; }
+.view { display:none; }
+.view.active { display:block; }
+.login-tab.active { color:#34d399; border-bottom-color:#34d399; }
+#robotic-arm-container { transition: all 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+.waste-item { cursor:pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.5s; }
+.waste-item:hover { transform:scale(1.1); box-shadow:0 0 20px rgba(52,211,153,0.5); }
+.waste-item.grabbed { opacity:0; transform:scale(0.5); }
+.gripper { transition: all 0.3s ease; }
+.chat-bubble { max-width:80%; }
+.user-bubble { background:#30363d; }
+.gokul-bubble { background:#1f2937; }
+.chat-question { cursor:pointer; border:1px solid #30363d; transition: all 0.2s; }
+.chat-question:hover { border-color:#34d399; background-color:#161b22; }
+#preloader { position: fixed; top:0; left:0; width:100%; height:100%; background:#0D1117; z-index:9999; display:flex; align-items:center; justify-content:center; transition:opacity 0.5s ease; }
+@keyframes dance {0%,100%{transform:rotate(-10deg);}50%{transform:rotate(10deg);} }
+#preloader svg { animation:dance 1s ease-in-out infinite; }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- Preloader -->
+<div id="preloader"><svg viewBox="0 0 100 200" class="h-40 w-auto" style="transform-origin:50% 10%;"><rect x="40" y="0" width="20" height="20" rx="5" fill="#4b5563"/><rect x="45" y="20" width="10" height="100" fill="#6b7280"/><g style="transform-origin:50px 120px;"><path d="M 45 120 L 35 140 L 40 140 L 50 120 Z" fill="#4b5563"/><path d="M 55 120 L 65 140 L 60 140 L 50 120 Z" fill="#4b5563"/></g></svg></div>
+
+<div id="app" class="hidden">
+    <!-- Landing Page -->
+    <div id="landing-view" class="view active">
+        <header class="bg-gray-900/50 backdrop-blur-lg sticky top-0 z-50 border-b border-gray-800">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <img id="landing-logo" alt="ZerOwasteX Logo" class="h-10 w-auto"/>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#solution" class="nav-link text-gray-300 hover:text-white">Solution</a>
+                    <a href="#playground" class="nav-link text-gray-300 hover:text-white">Playground</a>
+                    <a href="#impact" class="nav-link text-gray-300 hover:text-white">Impact</a>
+                </div>
+                <button id="show-login-btn" class="bg-emerald-500 text-white font-semibold py-2 px-5 rounded-lg hover:bg-emerald-600 transition-colors">Dashboard Login</button>
+            </nav>
+        </header>
+        <main>
+            <section class="hero-bg py-20 md:py-32">
+                <div class="container mx-auto px-6 text-center relative z-10">
+                    <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4 fade-in">Revolutionizing Waste Management at the Source.</h1>
+                    <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8 fade-in" style="transition-delay: 150ms;">Interact with AI & robotic arms to learn how waste is segregated in real time.</p>
+                    <a href="#playground" class="bg-gradient-to-r from-sky-500 to-emerald-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:opacity-90 transition-opacity fade-in" style="transition-delay: 300ms;">Try it Now</a>
+                </div>
+            </section>
+
+            <section id="solution" class="py-20 bg-[#010409]">
+                <div class="container mx-auto px-6 text-center mb-12">
+                    <h2 class="text-4xl font-bold gradient-text mb-4 fade-in">An Intelligent, Automated Solution</h2>
+                    <p class="text-lg text-gray-400 max-w-3xl mx-auto fade-in" style="transition-delay:150ms;">Smart bins, robotic arms, and AI make waste segregation automated, precise, and engaging.</p>
+                </div>
+            </section>
+
+            <section id="playground" class="py-20">
+                <div class="container mx-auto px-6">
+                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-8 fade-in">Interactive Playground</h2>
+                    <div class="relative h-96 bg-[#010409] rounded-lg border border-gray-700 overflow-hidden">
+                        <!-- Trash bins -->
+                        <div class="absolute bottom-0 w-full flex h-1/4">
+                            <div id="bin-recyclable" class="w-1/3 flex items-center justify-center border-r border-t border-gray-700 text-sky-400">Recyclable</div>
+                            <div id="bin-biodegradable" class="w-1/3 flex items-center justify-center border-r border-t border-gray-700 text-emerald-400">Biodegradable</div>
+                            <div id="bin-hazardous" class="w-1/3 flex items-center justify-center border-t border-gray-700 text-red-400">Hazardous</div>
+                        </div>
+                        <!-- Trash items -->
+                        <div id="trash-items" class="absolute top-0 left-0 w-full h-full pointer-events-none">
+                            <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" class="w-12 h-12 waste-item absolute top-10 left-10" data-type="recyclable"/>
+                            <img src="https://cdn-icons-png.flaticon.com/512/616/616397.png" class="w-12 h-12 waste-item absolute top-24 left-40" data-type="biodegradable"/>
+                            <img src="https://cdn-icons-png.flaticon.com/512/616/616442.png" class="w-12 h-12 waste-item absolute top-16 left-64" data-type="hazardous"/>
+                        </div>
+                        <!-- Robotic Arm -->
+                        <div id="robotic-arm-container" class="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-40 h-64">
+                            <div class="gripper w-16 h-4 bg-gray-400 mx-auto rounded mb-1"></div>
+                            <div class="arm w-4 h-32 bg-gray-500 mx-auto rounded"></div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-between items-center">
+                        <span class="text-white font-bold text-lg">Points: <span id="points">0</span></span>
+                        <button id="reset-playground" class="bg-red-500 px-4 py-2 rounded hover:bg-red-600 transition-colors">Reset</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="impact" class="py-20 bg-[#010409]">
+                <div class="container mx-auto px-6 text-center">
+                    <h2 class="text-4xl font-bold gradient-text mb-8 fade-in">Impact Metrics</h2>
+                    <canvas id="impactChart" class="mx-auto max-w-3xl fade-in"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Dashboard/Login -->
+    <div id="dashboard-view" class="view">
+        <div class="container mx-auto px-6 py-16">
+            <div class="login-card max-w-md mx-auto p-8 rounded-xl">
+                <h2 class="text-2xl font-bold mb-4 text-white">Login to Dashboard</h2>
+                <input type="email" id="email" placeholder="Email" class="w-full mb-4 px-4 py-2 rounded bg-gray-800 border border-gray-600 text-white"/>
+                <input type="password" id="password" placeholder="Password" class="w-full mb-4 px-4 py-2 rounded bg-gray-800 border border-gray-600 text-white"/>
+                <button id="login-btn" class="w-full bg-emerald-500 py-2 rounded hover:bg-emerald-600 text-white font-semibold">Login</button>
+            </div>
+            <div id="dashboard-content" class="mt-12 hidden">
+                <h2 class="text-3xl font-bold mb-6 text-white">Dashboard</h2>
+                <canvas id="dashboardChart" class="mb-6"></canvas>
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full text-left border border-gray-700">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-2 border border-gray-700">User</th>
+                                <th class="px-4 py-2 border border-gray-700">Points</th>
+                                <th class="px-4 py-2 border border-gray-700">Last Active</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body" class="text-white"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div id="chatbot" class="fixed bottom-4 right-4 w-80 h-96 bg-gray-900 rounded-xl border border-gray-700 flex flex-col overflow-hidden shadow-lg">
+        <div class="bg-gray-800 px-4 py-2 font-semibold text-white">GOKUL Chatbot</div>
+        <div id="chat-body" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-900"></div>
+        <div class="p-2 flex">
+            <input id="chat-input" class="flex-1 bg-gray-800 px-3 py-2 rounded-l text-white" placeholder="Ask me anything"/>
+            <button id="chat-send" class="bg-emerald-500 px-4 py-2 rounded-r hover:bg-emerald-600">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Preloader
+    setTimeout(() => { document.getElementById('preloader').style.opacity=0; setTimeout(()=>document.getElementById('preloader').remove(),500); document.getElementById('app').classList.remove('hidden'); },1500);
+
+    // Fade-in
+    const faders = document.querySelectorAll('.fade-in');
+    const appearOptions = { threshold:0.2 };
+    const appearOnScroll = new IntersectionObserver((entries, observer)=>{
+        entries.forEach(entry => { if(entry.isIntersecting){ entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
+    }, appearOptions);
+    faders.forEach(fader => appearOnScroll.observe(fader));
+
+    // Views switch
+    document.getElementById('show-login-btn').onclick = () => { document.querySelector('.view.active').classList.remove('active'); document.getElementById('dashboard-view').classList.add('active'); }
+
+    // Waste playground drag/drop
+    const trashItems = document.querySelectorAll('.waste-item');
+    const roboticArm = document.getElementById('robotic-arm-container');
+    let points = 0;
+    trashItems.forEach(item=>{
+        item.addEventListener('mousedown', e=>{
+            item.classList.add('grabbed');
+            const type = item.dataset.type;
+            const rect = roboticArm.getBoundingClientRect();
+            item.style.left = (rect.left + rect.width/2 - 24)+'px';
+            item.style.top = (rect.top - 20)+'px';
+            points += 10;
+            document.getElementById('points').innerText = points;
+            setTimeout(()=>item.remove(),400);
+        });
+    });
+
+    // Reset playground
+    document.getElementById('reset-playground').onclick = ()=>{ location.reload(); }
+
+    // Charts
+    const ctx = document.getElementById('impactChart').getContext('2d');
+    new Chart(ctx, { type:'bar', data:{ labels:['Recyclable','Biodegradable','Hazardous'], datasets:[{ label:'Collected (kg)', data:[12,20,5], backgroundColor:['#0ea5e9','#10b981','#ef4444'] }] }, options:{ responsive:true, plugins:{ legend:{ display:false } } } });
+
+    // Dashboard & Supabase
+    const supabase = Supabase.createClient('YOUR_SUPABASE_URL','YOUR_SUPABASE_ANON_KEY');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+    const dashboardChart = document.getElementById('dashboardChart').getContext('2d');
+    let dashboardChartInstance = new Chart(dashboardChart, { type:'line', data:{ labels:[], datasets:[{label:'Points',data:[],borderColor:'#34d399',fill:false}] }, options:{ responsive:true } });
+    document.getElementById('login-btn').onclick = async()=>{
+        const email=document.getElementById('email').value, password=document.getElementById('password').value;
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if(!error){ document.getElementById('dashboard-content').classList.remove('hidden'); loadLeaderboard(); loadChart(); }
+        else{ alert(error.message); }
+    };
+    async function loadLeaderboard(){
+        const { data, error } = await supabase.from('leaderboard').select('*').order('points',{ascending:false});
+        if(!error){ leaderboardBody.innerHTML=''; data.forEach(u=>{ leaderboardBody.innerHTML+=`<tr><td class="px-4 py-2 border border-gray-700">${u.username}</td><td class="px-4 py-2 border border-gray-700">${u.points}</td><td class="px-4 py-2 border border-gray-700">${new Date(u.last_active).toLocaleString()}</td></tr>`; }); } }
+    async function loadChart(){
+        const { data, error } = await supabase.from('leaderboard').select('*');
+        if(!error){
+            dashboardChartInstance.data.labels = data.map(d=>d.username);
+            dashboardChartInstance.data.datasets[0].data = data.map(d=>d.points);
+            dashboardChartInstance.update();
+        }
+    }
+
+    // Chatbot
+    const chatBody = document.getElementById('chat-body');
+    document.getElementById('chat-send').onclick = ()=>{
+        const val = document.getElementById('chat-input').value.trim(); if(!val) return;
+        const userBubble = document.createElement('div'); userBubble.className='chat-bubble user-bubble p-2 rounded ml-auto'; userBubble.innerText = val; chatBody.appendChild(userBubble);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        document.getElementById('chat-input').value='';
+        setTimeout(()=>{ const botBubble = document.createElement('div'); botBubble.className='chat-bubble gokul-bubble p-2 rounded mr-auto'; botBubble.innerText=`[GOKUL AI]: I received "${val}"`; chatBody.appendChild(botBubble); chatBody.scrollTop = chatBody.scrollHeight; },500);
+    };
+});
+</script>
+</body>
+</html>
